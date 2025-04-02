@@ -1,0 +1,2 @@
+# HammingCode
+Simple Hamming Code
