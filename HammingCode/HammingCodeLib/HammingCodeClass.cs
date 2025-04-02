@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace HammingCodeLib
 {
@@ -29,7 +28,8 @@ namespace HammingCodeLib
             // вставляем контрольные биты во входную строку
             for(int indicator = 0; indicator < controlBitsCount; indicator++)
             {
-                text = text.Insert((int)Math.Pow(2, indicator) - 1, "0");
+                var pos = (int)Math.Pow(2, indicator) - 1;
+                text = text.Insert(pos, "0");
             }
 
             // определяем значения контрольных битов
@@ -74,7 +74,7 @@ namespace HammingCodeLib
             // проверяем позицию ошибки (если ненулевая, значит в таком бите находится ошибка)
             if (errorPos != 0)
             {
-                Console.WriteLine($"Error Poition: \t\t {errorPos}");
+                Console.WriteLine($"Detected Error in: \t {errorPos}");
                 var newBit = text[errorPos - 1] == '0' ? "1" : "0";
                 text = text.Remove(errorPos - 1, 1);
                 text = text.Insert(errorPos - 1, newBit);
@@ -118,7 +118,7 @@ namespace HammingCodeLib
             return count - 1;
         }
         /// <summary>
-        /// Определение значений каждого контрольного бита
+        /// Определение значений каждого контрольного бита входной строки
         /// </summary>
         /// <param name="text">Входная строка</param>
         /// <param name="controlBitsCount">Количество контрольных битов</param>
@@ -136,6 +136,12 @@ namespace HammingCodeLib
             }
             return text;
         }
+        /// <summary>
+        /// Определение значений каждого контрольного бита закодированной строки
+        /// </summary>
+        /// <param name="text">Входная строка</param>
+        /// <param name="controlBitsCount">Количество контрольных битов</param>
+        /// <returns>Список контрольных битов</returns>
         private static List<string> ComputeControlBits_EncodedText(string text, int controlBitsCount)
         {
             var controlBits = new List<string>();
@@ -206,6 +212,7 @@ namespace HammingCodeLib
         {
             var random = new Random();
             var errorPos = random.Next(0, code.Length);
+            Console.WriteLine($"Set Error in: \t\t {errorPos}");
             var newBit = code[errorPos - 1] == '0' ? "1" : "0";
             code = code.Remove(errorPos - 1, 1);
             code = code.Insert(errorPos - 1, newBit);
