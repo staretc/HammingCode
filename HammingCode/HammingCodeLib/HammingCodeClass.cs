@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace HammingCodeLib
 {
@@ -31,7 +33,7 @@ namespace HammingCodeLib
             }
 
             // определяем значения контрольных битов
-            text = ComputeControlBits(text, controlBitsCount);
+            text = ComputeControlBits_InputText(text, controlBitsCount);
 
             return text;
         }
@@ -47,7 +49,43 @@ namespace HammingCodeLib
             {
                 throw new ArgumentException();
             }
+
+            // считаем количество контрольных битов в закодированной строке
             var controlBitsCount = ComputeCountOfControlBits_EncodedText(text);
+
+            // пересчитываем контрольные биты
+            var controlBits = ComputeControlBits_EncodedText(text, controlBitsCount);
+
+            // переменная для подсчёта позиции ошибки (сумма позиций несовпавших битов)
+            var errorPos = 0;
+
+            // сравниваем пересчитанные контрольные биты с битами в тексте
+            for (int indicator = 0; indicator < controlBitsCount; indicator++)
+            {
+                var pos = (int)Math.Pow(2, indicator) - 1;
+                // если не совпали
+                if (text[pos].ToString() != controlBits[indicator])
+                {
+                    // добавляем позицию в сумму
+                    errorPos += pos + 1;
+                }
+            }
+
+            // проверяем позицию ошибки (если ненулевая, значит в таком бите находится ошибка)
+            if (errorPos != 0)
+            {
+                Console.WriteLine($"Error Poition: \t\t {errorPos}");
+                var newBit = text[errorPos - 1] == '0' ? "1" : "0";
+                text = text.Remove(errorPos - 1, 1);
+                text = text.Insert(errorPos - 1, newBit);
+            }
+
+            // удаляем контроьные символы из строки
+            for (int indicator = controlBitsCount - 1; indicator >= 0; indicator--)
+            {
+                var pos = (int)Math.Pow(2, indicator) - 1;
+                text = text.Remove(pos, 1);
+            }
 
             return text;
         }
@@ -85,40 +123,64 @@ namespace HammingCodeLib
         /// <param name="text">Входная строка</param>
         /// <param name="controlBitsCount">Количество контрольных битов</param>
         /// <returns>Строка с подсчитанными контрольными битами</returns>
-        private static string ComputeControlBits(string text, int controlBitsCount)
+        private static string ComputeControlBits_InputText(string text, int controlBitsCount)
         {
             // для каждого контрольного бита
             for (int indicator = 0; indicator < controlBitsCount; indicator++)
             {
-                var position = (int)Math.Pow(2, indicator) - 1; // позиция контрольного бита
-                var shift = 0; // сдвиг по строке
-                var index = 0; // индексатор для прохода по строке
-                var controlBit = 0; // значение контрольного бита
+                var controlBit = GetControlBit(text, indicator);
+                // заносим в position значение controlBit по модулю 2
+                var pos = (int)Math.Pow(2, indicator) - 1;
+                text = text.Remove(pos, 1);
+                text = text.Insert(pos, controlBit);
+            }
+            return text;
+        }
+        private static List<string> ComputeControlBits_EncodedText(string text, int controlBitsCount)
+        {
+            var controlBits = new List<string>();
+            // для каждого контрольного бита
+            for (int indicator = 0; indicator < controlBitsCount; indicator++)
+            {
+                // получаем контрольный бит
+                var controlBit = GetControlBit(text, indicator);
+                // заносим в position значение controlBit по модулю 2
+                controlBits.Add(controlBit);
+            }
+            return controlBits;
+        }
+        private static string GetControlBit(string text, int indicator)
+        {
+            var position = (int)Math.Pow(2, indicator) - 1; // позиция контрольного бита
+            var shift = 0; // сдвиг по строке
+            var index = 0; // индексатор для прохода по строке
+            var controlBit = 0; // значение контрольного бита
 
-                // проходим биты начиная с position + 1
-                while (true) // тут проблемки
+            // проходим биты начиная с position + 1
+            while (true)
+            {
+                // берём следующие position + 1 битов
+                while (index < position + 1)
                 {
-                    while (index > position)
-                    {
-                        if (position + (position + 1) * shift + index >= text.Length)
-                        {
-                            break;
-                        }
-                        controlBit += int.Parse(text[position + (position + 1) * shift + index].ToString());
-                        index++;
-                    }
-                    if (position + (position + 1) * shift + index >= text.Length)
+                    // проверка если вышли за пределы строки
+                    if (position + 2 * (position + 1) * shift + index >= text.Length)
                     {
                         break;
                     }
-                    shift++;
-                    index = 0;
+                    // добавляем бит для суммы в контрольный бит
+                    controlBit += int.Parse(text[position + 2 * (position + 1) * shift + index].ToString());
+                    index++;
                 }
-                // заносим в position значение controlBit по модулю 2
-                text = text.Remove(position, 1);
-                text = text.Insert(position, $"{controlBit % 2}");
+                // проверка если вышли за пределы строки
+                if (position + 2 * (position + 1) * shift + index >= text.Length)
+                {
+                    break;
+                }
+                // перепрыгиваем через следующие position + 1 битов
+                shift++;
+                index = 0;
             }
-            return text;
+            return $"{controlBit % 2}";
         }
         /// <summary>
         /// Проверка строки на содержание битов
@@ -140,9 +202,15 @@ namespace HammingCodeLib
     }
     public static class ErrorMaker
     {
-        public static void SetRandomError(string code)
+        public static string SetRandomError(string code)
         {
+            var random = new Random();
+            var errorPos = random.Next(0, code.Length);
+            var newBit = code[errorPos - 1] == '0' ? "1" : "0";
+            code = code.Remove(errorPos - 1, 1);
+            code = code.Insert(errorPos - 1, newBit);
 
+            return code;
         }
     }
 }

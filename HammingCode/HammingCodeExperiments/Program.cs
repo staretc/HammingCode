@@ -13,8 +13,17 @@ namespace HammingCodeExperiments
         static void Main(string[] args)
         {
             string path = "../../../inputBytes.txt";
+            var inputText = File.ReadAllText(path);
+            Console.WriteLine($"Input Text:   \t\t {inputText}");
 
-            Console.WriteLine(HammingCode.Encode(File.ReadAllText(path)));
+            var encodedText = HammingCode.Encode(inputText);
+            Console.WriteLine($"Encoded Text: \t\t {encodedText}");
+
+            encodedText = ErrorMaker.SetRandomError(encodedText);
+            Console.WriteLine($"Encoded Text with error: {encodedText}");
+
+            var decodedText = HammingCode.Decode(encodedText);
+            Console.WriteLine($"Decoded Text: \t\t {decodedText}");
         }
     }
 }
