@@ -67,7 +67,7 @@ namespace HammingCodeLib
                 if (text[pos].ToString() != controlBits[indicator])
                 {
                     // добавляем позицию в сумму
-                    errorPos += pos + 1;
+                    errorPos += pos;
                 }
             }
 
@@ -75,9 +75,9 @@ namespace HammingCodeLib
             if (errorPos != 0)
             {
                 Console.WriteLine($"Detected Error in: \t {errorPos}");
-                var newBit = text[errorPos - 1] == '0' ? "1" : "0";
-                text = text.Remove(errorPos - 1, 1);
-                text = text.Insert(errorPos - 1, newBit);
+                var newBit = text[errorPos] == '0' ? "1" : "0";
+                text = text.Remove(errorPos, 1);
+                text = text.Insert(errorPos, newBit);
             }
 
             // удаляем контроьные символы из строки
@@ -213,9 +213,9 @@ namespace HammingCodeLib
             var random = new Random();
             var errorPos = random.Next(0, code.Length);
             Console.WriteLine($"Set Error in: \t\t {errorPos}");
-            var newBit = code[errorPos - 1] == '0' ? "1" : "0";
-            code = code.Remove(errorPos - 1, 1);
-            code = code.Insert(errorPos - 1, newBit);
+            var newBit = code[errorPos] == '0' ? "1" : "0";
+            code = code.Remove(errorPos, 1);
+            code = code.Insert(errorPos, newBit);
 
             return code;
         }
