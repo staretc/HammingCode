@@ -19,7 +19,7 @@ namespace HammingCodeLib
             // проверяем входную строку на содержание битов
             if (!CheckInputBits(text))
             {
-                throw new ArgumentException();
+                throw new ArgumentException("Файл содержит не только биты!");
             }
 
             // считаем количество контрольных битов
@@ -47,7 +47,7 @@ namespace HammingCodeLib
             // проверяем входную строку на содержание битов
             if (!CheckInputBits(text))
             {
-                throw new ArgumentException();
+                throw new ArgumentException("Файл содержит не только биты!");
             }
 
             // считаем количество контрольных битов в закодированной строке
@@ -57,7 +57,7 @@ namespace HammingCodeLib
             var controlBits = ComputeControlBits_EncodedText(text, controlBitsCount);
 
             // переменная для подсчёта позиции ошибки (сумма позиций несовпавших битов)
-            var errorPos = 0;
+            var errorPos = -1;
 
             // сравниваем пересчитанные контрольные биты с битами в тексте
             for (int indicator = 0; indicator < controlBitsCount; indicator++)
@@ -67,17 +67,22 @@ namespace HammingCodeLib
                 if (text[pos].ToString() != controlBits[indicator])
                 {
                     // добавляем позицию в сумму
-                    errorPos += pos;
+                    if (errorPos == -1)
+                    {
+                        errorPos = pos + 1;
+                        continue;
+                    }
+                    errorPos += pos + 1;
                 }
             }
 
-            // проверяем позицию ошибки (если ненулевая, значит в таком бите находится ошибка)
-            if (errorPos != 0)
+            // проверяем позицию ошибки (если не -1, значит в таком бите находится ошибка)
+            if (errorPos != -1)
             {
-                Console.WriteLine($"Detected Error in: \t {errorPos}");
-                var newBit = text[errorPos] == '0' ? "1" : "0";
-                text = text.Remove(errorPos, 1);
-                text = text.Insert(errorPos, newBit);
+                Console.WriteLine($"Detected Error in: \t {errorPos - 1}");
+                var newBit = text[errorPos - 1] == '0' ? "1" : "0";
+                text = text.Remove(errorPos - 1, 1);
+                text = text.Insert(errorPos - 1, newBit);
             }
 
             // удаляем контроьные символы из строки
@@ -110,12 +115,12 @@ namespace HammingCodeLib
         /// <returns>Количество контрольных битов в закодированной строке</returns>
         private static int ComputeCountOfControlBits_EncodedText(string text)
         {
-            var count = 1;
+            var count = 0;
             while (Math.Pow(2, count) < text.Length)
             {
                 count++;
             }
-            return count - 1;
+            return count;
         }
         /// <summary>
         /// Определение значений каждого контрольного бита входной строки
@@ -159,7 +164,7 @@ namespace HammingCodeLib
         {
             var position = (int)Math.Pow(2, indicator) - 1; // позиция контрольного бита
             var shift = 0; // сдвиг по строке
-            var index = 0; // индексатор для прохода по строке
+            var index = 1; // индексатор для прохода по строке
             var controlBit = 0; // значение контрольного бита
 
             // проходим биты начиная с position + 1
